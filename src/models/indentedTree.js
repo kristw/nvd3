@@ -365,6 +365,12 @@ nv.models.indentedTree = function() {
     return chart;
   }
 
+  chart.childIndent = function(_){
+     if (!arguments.length) return childIndent;
+    childIndent = _;
+    return chart;
+  }
+
   //============================================================
 
 
