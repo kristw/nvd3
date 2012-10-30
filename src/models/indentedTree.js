@@ -1,3 +1,4 @@
+//Adapted from nv.models.indentedTree from NVD3.js
 
 nv.models.indentedTree = function() {
 
@@ -6,13 +7,13 @@ nv.models.indentedTree = function() {
   //------------------------------------------------------------
 
   var margin = {top: 0, right: 0, bottom: 0, left: 0} //TODO: implement, maybe as margin on the containing div
-    , width = 960
+    , width = "960px"
     , height = 500
     , color = nv.utils.defaultColor()
     , id = Math.floor(Math.random() * 10000)
     , header = true
     , noData = "No Data Available."
-    , childIndent = 20
+    , childIndent = 10
     , columns = [{key:'key', label: 'Name', type:'text'}] //TODO: consider functions like chart.addColumn, chart.removeColumn, instead of a block like this
     , tableClass = null
     , iconOpen = 'images/grey-plus.png' //TODO: consider removing this and replacing with a '+' or '-' unless user defines images
@@ -22,14 +23,13 @@ nv.models.indentedTree = function() {
 
   //============================================================
 
-
   function chart(selection) {
     selection.each(function(data) {
       var i = 0,
           depth = 1;
 
       var tree = d3.layout.tree()
-          .children(function(d) { return d.values })
+          .children(function(d) { return d.expanded ? d.values:null; })
           .size([height, childIndent]); //Not sure if this is needed now that the result is HTML
 
       chart.update = function() { selection.transition().call(chart) };
@@ -49,10 +49,14 @@ nv.models.indentedTree = function() {
       //------------------------------------------------------------
       // Setup containers and skeleton of chart
 
+      selection.style("width", width);
       var wrap = d3.select(this).selectAll('div').data([[nodes]]);
-      var wrapEnter = wrap.enter().append('div').attr('class', 'nvd3 nv-wrap nv-indentedtree');
+      var wrapEnter = wrap.enter().append('div')
+        .attr('class', 'nvd3 nv-wrap nv-indentedtree');
       var tableEnter = wrapEnter.append('table');
-      var table = wrap.select('table').attr('width', '100%').attr('class', tableClass);
+      var table = wrap.select('table')
+        .attr('width', '100%')
+        .attr('class', tableClass);
 
       //------------------------------------------------------------
 
@@ -91,20 +95,27 @@ nv.models.indentedTree = function() {
 
       node.exit().remove();
 
-
       node.select('img.nv-treeicon')
           .attr('src', icon)
           .classed('folded', folded);
 
       var nodeEnter = node.enter().append('tr');
 
-
       columns.forEach(function(column, index) {
 
         var nodeName = nodeEnter.append('td')
             .style('padding-left', function(d) { return (index ? 0 : d.depth * childIndent + 12 + (icon(d) ? 0 : 16)) + 'px' }, 'important') //TODO: check why I did the ternary here
-            .style('text-align', column.type == 'numeric' ? 'right' : 'left');
+            .style('text-align', function(d){
+              switch(column.type){
+                case "numeric": return "right";
+                case "checkbox": return "center";
+                default: return "left";
+              }
+            });
 
+        if(column.type=="blank"){
+          return;
+        }
 
         if (index == 0) {
           nodeName.append('img')
@@ -113,27 +124,38 @@ nv.models.indentedTree = function() {
               .attr('src', icon)
               .style('width', '14px')
               .style('height', '14px')
-              .style('padding', '0 1px')
+              .style('padding', '0px 1px 2px 0px')
               .style('display', function(d) { return icon(d) ? 'inline-block' : 'none'; })
               .on('click', click);
         }
 
-
-        nodeName.append('span')
-            .attr('class', d3.functor(column.classes) )
-            .text(function(d) { return column.format ? column.format(d) :
-                                        (d[column.key] || '-') });
-
-        if  (column.showCount)
+        // add content
+        if(column.type=="checkbox"){
+          nodeName.append("label")
+              .attr("class", "checkbox")
+              .style("padding-left", "21px")
+            .append("input")
+              .attr("type", "checkbox")
+              .property("checked", function(d){return d.checked==true?true:false})
+              .on("click", toggle)
+        }
+        else{
           nodeName.append('span')
-              .attr('class', 'nv-childrenCount')
-              .text(function(d) {
-                return ((d.values && d.values.length) || (d._values && d._values.length)) ?
-                    '(' + ((d.values && d.values.length) || (d._values && d._values.length)) + ')'
-                  : ''
-              });
+            .attr('class', d3.functor(column.classes) )
+            .text(function(d) { return column.format ? column.format(d[column.key]) :
+                                        (d[column.key] || '-') });
+        }
 
+        // if(column.showCount)
+        //   nodeName.append('span')
+        //       .attr('class', 'nv-childrenCount')
+        //       .text(function(d) {
+        //         return ((d.values && d.values.length) || (d._values && d._values.length)) ?
+        //             '(' + ((d.values && d.values.length) || (d._values && d._values.length)) + ')'
+        //           : ''
+        //       });
 
+        // add custom click handler
         if (column.click)
           nodeName.select('span').on('click', column.click);
 
@@ -142,28 +164,28 @@ nv.models.indentedTree = function() {
 
       node
         .order()
-        .on('click', function(d) { 
+        .on('click', function(d) {
           dispatch.elementClick({
             row: this, //TODO: decide whether or not this should be consistent with scatter/line events or should be an html link (a href)
             data: d,
             pos: [d.x, d.y]
           });
         })
-        .on('dblclick', function(d) { 
+        .on('dblclick', function(d) {
           dispatch.elementDblclick({
             row: this,
             data: d,
             pos: [d.x, d.y]
           });
         })
-        .on('mouseover', function(d) { 
+        .on('mouseover', function(d) {
           dispatch.elementMouseover({
             row: this,
             data: d,
             pos: [d.x, d.y]
           });
         })
-        .on('mouseout', function(d) { 
+        .on('mouseout', function(d) {
           dispatch.elementMouseout({
             row: this,
             data: d,
@@ -172,6 +194,42 @@ nv.models.indentedTree = function() {
         });
 
 
+      function toggle(d){
+        d3.event.stopPropagation();
+
+        if(d.checked){
+          d.checked = false;
+        }
+        else{
+          d.checked = true;
+        }
+
+        if(!hasChildren(d)) {
+          //download file
+          //window.location.href = d.url;
+          return true;
+        }
+        else{
+          if(d.checked){
+              d.values && d.values.forEach(function(node){
+                setCheck(node, true);
+              });
+          }
+          else{
+              d.values && d.values.forEach(function(node){
+                setCheck(node, false);
+              });
+          }
+        }
+        chart.update();
+      }
+
+      function setCheck(d, checked){
+        d.checked = checked;
+        d.values && d.values.forEach(function(node){
+          setCheck(node, checked);
+        });
+      }
 
 
       // Toggle children on click.
@@ -182,7 +240,7 @@ nv.models.indentedTree = function() {
           //If you shift-click, it'll toggle fold all the children, instead of itself
           d3.event.shiftKey = false;
           d.values && d.values.forEach(function(node){
-            if (node.values || node._values) {
+            if (node.values){
               click(node, 0, true);
             }
           });
@@ -193,29 +251,37 @@ nv.models.indentedTree = function() {
           //window.location.href = d.url;
           return true;
         }
-        if (d.values) {
-          d._values = d.values;
-          d.values = null;
-        } else {
-          d.values = d._values;
-          d._values = null;
+
+        if(d.expanded){
+          d.expanded = false;
+        }
+        else{
+          d.expanded = true;
         }
         chart.update();
       }
 
 
       function icon(d) {
-        return (d._values && d._values.length) ? iconOpen : (d.values && d.values.length) ? iconClose : '';
+        if(hasChildren(d)){
+          if(folded(d)){
+            return iconOpen;
+          }
+          else{
+            return iconClose;
+          }
+        }
+        else{
+          return '';
+        }
       }
 
       function folded(d) {
-        return (d._values && d._values.length);
+        return !d.expanded;
       }
 
       function hasChildren(d) {
-        var values = d.values || d._values;
-
-        return (values && values.length);
+        return d.values && d.values.length>0;
       }
 
 
