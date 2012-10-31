@@ -2952,8 +2952,8 @@ nv.models.indentedTree = function() {
               .style("padding-left", "21px")
             .append("input")
               .attr("type", "checkbox")
-              .property("checked", function(d){return d.checked==true?true:false})
-              .on("click", toggle)
+              .property("checked", function(d){return d[column.key]==true?true:false})
+              .on("click", function(d){ toggle(d, column.key) })
         }
         else{
           nodeName.append('span')
@@ -3010,14 +3010,14 @@ nv.models.indentedTree = function() {
         });
 
 
-      function toggle(d){
+      function toggle(d, columnKey){
         d3.event.stopPropagation();
 
-        if(d.checked){
-          d.checked = false;
+        if(d[columnKey]){
+          d[columnKey] = false;
         }
         else{
-          d.checked = true;
+          d[columnKey] = true;
         }
 
         if(!hasChildren(d)) {
@@ -3026,27 +3026,26 @@ nv.models.indentedTree = function() {
           return true;
         }
         else{
-          if(d.checked){
+          if(d[columnKey]){
               d.values && d.values.forEach(function(node){
-                setCheck(node, true);
+                setCheck(node, columnKey, true);
               });
           }
           else{
               d.values && d.values.forEach(function(node){
-                setCheck(node, false);
+                setCheck(node, columnKey, false);
               });
           }
         }
         chart.update();
       }
 
-      function setCheck(d, checked){
-        d.checked = checked;
+      function setCheck(d, columnKey, checked){
+        d[columnKey] = checked;
         d.values && d.values.forEach(function(node){
-          setCheck(node, checked);
+          setCheck(node, columnKey, checked);
         });
       }
-
 
       // Toggle children on click.
       function click(d, _, unshift) {
