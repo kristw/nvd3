@@ -104,14 +104,41 @@ nv.models.indentedTree = function() {
       columns.forEach(function(column, index) {
 
         var nodeName = nodeEnter.append('td')
-            .style('padding-left', function(d) { return (index ? 0 : d.depth * childIndent + 12 + (icon(d) ? 0 : 16)) + 'px' }, 'important') //TODO: check why I did the ternary here
-            .style('text-align', function(d){
-              switch(column.type){
-                case "numeric": return "right";
-                case "checkbox": return "center";
-                default: return "left";
-              }
-            });
+            .style('padding-left', function(d) { return (index ? 0 : (d.depth-1) * childIndent +7 + (icon(d) ? 0 : 7)) + 'px' }, 'important') //TODO: check why I did the ternary here
+
+        if(index==0){
+          nodeName.append("div")
+              .style("width", function(d){
+                return (d.depth ? 10 : 0) + "px";
+              })
+              .style("height", 13 + "px")
+              .style("display", "inline-block")
+              .style("overflow", "auto")
+            .append("svg")
+              .style("width", function(d){
+                return (d.depth ? 10 : 0) + "px";
+              })
+              .style("height",13)
+            .append("polyline")
+              .attr("class", "treeLine")
+              .attr("points", "0.5,0.5 0.5,7.5 30.5,7.5")
+              .style("fill", "none")
+              .style("stroke", "#444444")
+              // .append("path")
+        }
+
+        nodeName.style('text-align', function(d){
+          if(column.textAlign){
+            return column.textAlign;
+          }
+          else{
+            switch(column.type){
+              case "numeric": return "right";
+              case "checkbox": return "center";
+              default: return "left";
+            }
+          }
+        });
 
         if(column.type=="blank"){
           return;
@@ -133,7 +160,7 @@ nv.models.indentedTree = function() {
         if(column.type=="checkbox"){
           nodeName.append("label")
               .attr("class", "checkbox")
-              .style("padding-left", "21px")
+//              .style("padding-left", "21px")
             .append("input")
               .attr("type", "checkbox")
               .property("checked", function(d){return d[column.key]==true?true:false})
